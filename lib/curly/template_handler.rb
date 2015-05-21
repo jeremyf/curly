@@ -44,7 +44,19 @@ class Curly::TemplateHandler
       # Template is empty, so there's no need to initialize a presenter.
       return %("") if template.source.empty?
 
-      path = template.virtual_path
+      # Virtual path is nice but when dealing with view paths that are subsets
+      # of another view path, this gets crazy. Consider the following view
+      # paths for diminishing specificity:
+      #
+      # * /app/views/works/:work_type/show
+      # * /app/views/works/show
+      if template.respond_to?(:identifier)
+        path = template.identifier.
+          sub(%r{\A#{Rails.root.join('app/views')}/}, '').
+          sub(%r{#{template.virtual_path}\..*\Z}, template.virtual_path)
+      else
+        path = template.virtual_path
+      end
       presenter_class = Curly::Presenter.presenter_for_path(path)
 
       raise Curly::PresenterNotFound.new(path) if presenter_class.nil?
